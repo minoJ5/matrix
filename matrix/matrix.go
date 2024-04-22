@@ -1,7 +1,9 @@
 package matrix
 
 import (
+	"errors"
 	"fmt"
+	"log"
 	"sync"
 )
 
@@ -26,19 +28,36 @@ func (m *Matrix) allocateMatrix(r, c int) {
 	}
 }
 
-// Fill the matrix with data from rows
+// Fill the matrix with data from rows.
+// Set to nil if input is invalid, i. e., the matrix is empty.
+// Otherwise fill the gaps with zeros.
 func (m *Matrix) MakeMatrix(rows ...Row) {
-	*m = make(Matrix, len(rows))
-	for r, row := range rows {
-		(*m)[r] = make(Row, len(row))
-		copy((*m)[r], row)
+	if rows == nil {
+		*m = nil
+	} else {
+		*m = make(Matrix, len(rows))
+		for r, row := range rows {
+			(*m)[r] = make(Row, len(row))
+			copy((*m)[r], row)
+		}
+	}
+	q := checkIntegrity(*m)
+	if q == MatrixEmpty {
+		log.Printf("Critical! Cannot make matrix. Matrix is empty, check input!\n")
+		*m = nil
+		return
+	} else if q == MissingRowData || q == MissingRows || q == MissingRowsAndData {
+		m.fixMatrix()
 	}
 }
 
-// Print the matrix in the console with tabs
-// in case you want to copy and paste
+// Print the matrix in the console with tabs as spacers.
+// If the matrix is nill log nil.
 func (m *Matrix) Print() {
-	// TODO: Integrity check
+	if *m == nil {
+		log.Printf("[nil]")
+		return
+	}
 	var s string
 	for r := 0; r < len(*m); r++ {
 		for c := 0; c < len((*m)[r]); c++ {
@@ -49,10 +68,6 @@ func (m *Matrix) Print() {
 	fmt.Printf("%s", s)
 }
 
-// Check if a matrix is empty
-func checkEmpty(m Matrix) bool {
-	return len(m) < 1
-}
 
 func getMaxRowLength(m Matrix) int {
 	var ml int
@@ -64,13 +79,13 @@ func getMaxRowLength(m Matrix) int {
 	return ml
 }
 
-// Check for empty rows or values
+// Check for empty rows or values.
 func checkIntegrity(m Matrix) int {
-	var ml int = getMaxRowLength(m)
-	if ml == 0 {
+	if m == nil {
 		return MatrixEmpty
 	}
-	if checkEmpty(m) {
+	var ml int = getMaxRowLength(m)
+	if ml == 0 {
 		return MatrixEmpty
 	}
 	var ce int // Counter empty rows
@@ -99,7 +114,7 @@ func checkIntegrity(m Matrix) int {
 }
 
 // If data is missing and the matrix is not empty
-// fill the missing entries with zeros
+// fill the missing entries with zeros.
 func (m *Matrix) fixMatrix() {
 	var wg sync.WaitGroup
 	var ml = getMaxRowLength(*m)
@@ -117,10 +132,15 @@ func (m *Matrix) fixMatrix() {
 	wg.Wait()
 }
 
-// Calculate the product of 2 matrices concurrently
-func Product(a, b *Matrix) Matrix {
-	//TODO: Check validity and integrity
-	//t := time.Now()
+// Calculate the product of 2 matrices concurrently.
+// Retrun nil if dimensions are not valid.
+func Product(a, b *Matrix) (Matrix, error) {
+	if len((*a)[0]) != len(*b) {
+		err := fmt.Sprintf("Critical invalid dimensions!\n"+
+			"Number of colums of the first matrix (%d) has "+
+			"to be equal to the number of rows of the second matrix (%d)\n", len((*a)[0]), len(*b))
+		return nil, errors.New(err)
+	}
 	var p Matrix
 	var wg sync.WaitGroup
 	p.allocateMatrix(len((*a)), len((*b)[0]))
@@ -136,21 +156,5 @@ func Product(a, b *Matrix) Matrix {
 		}
 	}
 	wg.Wait()
-	//fmt.Println("async:", time.Since(t))
-	return p
+	return p, nil
 }
-
-// func Products(a, b *Matrix) Matrix {
-// 	var p Matrix
-// 	t := time.Now()
-// 	p.allocateMatrix(len((*a)), len((*b)[0]))
-// 	for r := range *a {
-// 		for c := 0; c < len((*b)[0]); c++ {
-// 			for k := 0; k < len(*b); k++ {
-// 				p[r][c] += (*a)[r][k] * (*b)[k][c]
-// 			}
-// 		}
-// 	}
-// 	fmt.Println("sync:", time.Since(t))
-// 	return p
-// }

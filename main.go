@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	mat "testmatrix/matrix"
 )
 
@@ -20,12 +21,10 @@ func main() {
 		mat.Row{4, 0},
 	)
 
-	var l mat.Matrix
-	l.MakeMatrix(
-		mat.Row{},
-		mat.Row{},
-	)
-
-	p := mat.Product(&m,&n)
+	p, err := mat.Product(&m, &n)
+	if err != nil {
+		fmt.Printf("%s", err)
+	}
 	p.Print()
+
 }
