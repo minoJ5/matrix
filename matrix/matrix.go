@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"reflect"
 	"sync"
 )
 
@@ -15,8 +16,15 @@ const (
 	DataIsGood
 )
 
+type linearObject interface {
+	Matrix | Vector
+}
+
 // Alias for a 1 dimensional array representing a vector
 type Row []float64
+
+// Semantics
+type Vector Row
 
 // Alias for a 2 dimentional array representing a matrix
 type Matrix []Row
@@ -67,7 +75,6 @@ func (m *Matrix) Print() {
 	}
 	fmt.Printf("%s", s)
 }
-
 
 func getMaxRowLength(m Matrix) int {
 	var ml int
@@ -134,10 +141,10 @@ func (m *Matrix) fixMatrix() {
 
 // Calculate the product of 2 matrices concurrently.
 // Retrun nil if dimensions are not valid.
-func Product(a, b *Matrix) (Matrix, error) {
+func ProductMM(a, b *Matrix) (Matrix, error) {
 	if len((*a)[0]) != len(*b) {
-		err := fmt.Sprintf("Critical invalid dimensions!\n"+
-			"Number of colums of the first matrix (%d) has "+
+		err := fmt.Sprintf("critical invalid dimensions!\n"+
+			"number of colums of the first matrix (%d) has "+
 			"to be equal to the number of rows of the second matrix (%d)\n", len((*a)[0]), len(*b))
 		return nil, errors.New(err)
 	}
@@ -157,4 +164,44 @@ func Product(a, b *Matrix) (Matrix, error) {
 	}
 	wg.Wait()
 	return p, nil
+}
+
+// Calculate the product of a matrix with a vector concurrently.
+// Retrun nil if dimensions are not valid.
+func productVM(a *Matrix, v *Vector) (Vector, error) {
+	if len((*a)[0]) != len(*v) {
+		err := fmt.Sprintf("critical invalid dimensions!\n"+
+			"number of colums of the first matrix (%d) has "+
+			"to be equal to the dimenston of the vector (%d)\n", len((*a)[0]), len(*v))
+		return nil, errors.New(err)
+	}
+	p := make(Vector, len(*v))
+	var wg sync.WaitGroup
+	for r := range *a {
+		for k := 0; k < len(*v); k++ {
+			wg.Add(1)
+			go func(r, k int) {
+				defer wg.Done()
+				p[r] += (*a)[r][k] * (*v)[k]
+			}(r, k)
+		}
+	}
+	wg.Wait()
+	return p, nil
+}
+
+// Wrapper around the multiplications of matrix matrix or matrix vector
+func Product[T linearObject](a *Matrix, b interface{}) (T, error) {
+	var p interface{}
+	var err error
+	switch bt := b.(type) {
+	case *Matrix:
+		p, err = ProductMM(a, bt)
+	case *Vector:
+		p, err = productVM(a, bt)
+	default:
+		err = fmt.Errorf("invalid second argument type! expected matrix or vector. reieved: %v", reflect.TypeOf(b))
+		return nil, err
+	}
+	return p.(T), err
 }

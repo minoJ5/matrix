@@ -1,7 +1,6 @@
 package matrix
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 )
@@ -72,14 +71,14 @@ func TestProduct(t *testing.T) {
 		Row{8, 5},
 		Row{4, 0},
 	)
-	p, err := Product(&m,&n)
+	p, err := Product[Matrix](&m, &n)
 	pc := Matrix{
 		{29, 12},
 		{56, 41},
 		{12, 8},
 	}
 
-	if !reflect.DeepEqual(p, pc) || err != nil{
+	if !reflect.DeepEqual(p, pc) || err != nil {
 		t.Error("Matrix product fail!")
 	}
 
@@ -96,10 +95,28 @@ func TestProduct(t *testing.T) {
 		Row{8, 5},
 		Row{4, 0},
 	)
-	q, err := Product(&r,&s)
-	fmt.Println(q)
+	q, err := Product[Matrix](&r, &s)
 	if err == nil || q != nil {
 		t.Error("Matrix product dimenstions check fail!")
 	}
 
+	v := Vector{100, 7, 9}
+	k, err := Product[Vector](&m, &v)
+	kc := Vector{141, 853, 418}
+
+	if !reflect.DeepEqual(k, kc) || err != nil {
+		t.Error("Matrix vector product fail!")
+	}
+
+	h, err := Product[Vector](&s, &v)
+	if err == nil || h != nil {
+		t.Error("Matrix vector product dimenstions check fail!")
+	}
+
+	var w int = 2
+	d, err := Product[Matrix](&s, &w)
+
+	if err == nil || d != nil {
+		t.Error("Matrix product type check failed!")
+	}
 }

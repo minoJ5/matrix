@@ -20,11 +20,16 @@ func main() {
 		mat.Row{8, 5},
 		mat.Row{4, 0},
 	)
-
-	p, err := mat.Product(&m, &n)
+	v := mat.Vector{100, 7, 9}
+	p, err := mat.Product[mat.Vector](&m, &v)
 	if err != nil {
 		fmt.Printf("%s", err)
 	}
-	p.Print()
+	fmt.Printf("p: %v\n", p)
+
+	var w int = 2
+	d, err := mat.Product[mat.Matrix](&m, &w)
+
+	fmt.Println(d == nil, err)
 
 }
